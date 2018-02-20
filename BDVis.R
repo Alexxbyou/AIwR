@@ -14,7 +14,9 @@ require(dplyr)
 # Age Visualization
 ##########################
 
-
+getcolumn<-function(name,df,column.name=T){
+  grep(name,names(df),ignore.case = T,value=column.name)
+}
 
 cutoff2label<-function(cutoff){
   np<-length(cutoff)
