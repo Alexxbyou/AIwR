@@ -108,6 +108,7 @@ cat.vis.donut<-function(
 ){
   names(data)<-c("Category","Count")
   data$Perc<-data$Count/sum(data$Count)
+  order<-order[1]
   if(order=="default")
     data$Category<-factor(data$Category,levels=rev(data$Category))
   if(order=="alphabet")
@@ -147,6 +148,7 @@ Prev.vis<-function(
   Title="Disease Prevalence",
   confidence=.95
 ){
+  order<-order[1]
   if(order=="default")
     prev.df$Disease<-factor(prev.df$Disease,levels=rev(prev.df$Disease))
   if(order=="alphabet")
