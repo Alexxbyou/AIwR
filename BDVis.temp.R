@@ -44,3 +44,8 @@ ggplot() +
   theme(panel.grid=element_blank(),
         axis.text=element_blank(),
         axis.ticks=element_blank())
+
+  
+cat.df.comp<-rbind(cat.df,cat.df,cat.df,cat.df)
+cat.df.comp$group<-rep(1:4,each=4)
+cat.df.comp$Freq<-abs(cat.df.comp$Freq+sample(1:5000,16)-2500)

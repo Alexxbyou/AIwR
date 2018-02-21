@@ -127,7 +127,7 @@ age.vis.comp<-function(
   age.group.sum$Group<-factor(age.group.sum$Group)
   
   g<-ggplot()+
-    geom_bar(data=age.group.sum,mapping=aes(x=Age,y=Count,group=Group,fill=Group,color=Elderly),stat="identity",position="dodge")+
+    geom_bar(data=age.group.sum,mapping=aes(x=Age,y=Count,group=Group,fill=Group,color=Elderly),size=1.1,stat="identity",position="dodge")+
     ggtitle("Age")+
     theme(legend.position = "bottom"
           ,plot.title = element_text(size = 20, face = "bold",hjust = 0.5))
@@ -138,15 +138,15 @@ age.vis.comp<-function(
 ##########################
 # Gender/Race/oth. Categorical Variables Visualization
 ##########################
-cat.vis<-function(data,Title){
+cat.vis.sing<-function(data,Title){
   if(length(unique(data[,1]))>3){
-    cat.vis.bar(data,Title)
+    cat.vis.bar.sing(data,Title)
   }else{
-    cat.vis.donut(data,Title)
+    cat.vis.donut.sing(data,Title)
   }
 }
 
-cat.vis.donut<-function(
+cat.vis.donut.sing<-function(
   data, #data.frame(Category,Count)
   Title
 ){
@@ -172,7 +172,39 @@ cat.vis.donut<-function(
   return(g)
 }
 
-cat.vis.bar<-function(
+cat.vis.donut.comp<-function(
+  data, #data.frame(Category,Count,group)
+  Title
+){
+  names(data)<-c("Category","Count","Group")
+  groupsum<-data%>%
+    group_by(Group)%>%
+    summarize(grpsum=sum(Count))
+  data<-left_join(data,groupsum)
+  data$Perc<-data$Count/data$grpsum*100
+  data$Group<-factor(data$Group,levels=c(unique(data$Group)," ","  ","   "))
+  data$Category<-as.factor(data$Category)
+  data$label.perc<-paste(sprintf("%.1f",data$Perc),"%",sep="")
+  
+  g<-ggplot() +
+    geom_bar(data=data, mapping=aes(x=Group,y=Perc,fill=Category),stat="identity") +
+    geom_text(mapping=aes(x=levels(data$Group),y=0,label=levels(data$Group),hjust=1))+
+    coord_polar(theta="y") +
+    xlab("")+ylab("")+ggtitle(Title)+
+    scale_fill_discrete(name="")+
+    theme(panel.grid=element_blank(),
+          axis.text=element_blank(),
+          axis.ticks=element_blank(),
+          legend.position = "bottom",
+          #legend.text = element_text(lgd.txt),
+          plot.title = element_text(size = 20, face = "bold",hjust = 0.5))
+  return(g)
+}
+
+
+
+
+cat.vis.bar.sing<-function(
   data, #data.frame(Category,Count)
   Title
 ){
@@ -194,7 +226,36 @@ cat.vis.bar<-function(
   return(g)
 }
 
+cat.vis.bar.comp<-function(
+  data, #data.frame(Category,Count,group)
+  Title
+){
+  names(data)<-c("Category","Count","Group")
+  groupsum<-data%>%
+    group_by(Group)%>%
+    summarize(grpsum=sum(Count))
+  data<-left_join(data,groupsum)
+  data$Perc<-data$Count/data$grpsum*100
+  data$Group<-as.factor(data$Group)
+  data$Category<-as.factor(data$Category)
+  data$label.cnt<-formatC(data$Count,big.mark=",")
+  
+  g<-ggplot() +
+    geom_bar(data=data, mapping=aes(x=Category,y=Perc,fill=Group),width=.5,stat="identity",position="dodge") +
+    xlab("")+ylab("Proportion(%)")+ggtitle(Title)+
+    scale_fill_discrete(name="")+
+    theme(legend.position = "bottom",
+          #axis.text.x=element_blank(),
+          #axis.ticks.x=element_blank(),
+          axis.title = element_text(size = 12, face = "bold"),
+          #legend.text = element_text(angle=30),
+          plot.title = element_text(size = 20, face = "bold",hjust = 0.5))
+  return(g)
+}
 
+data%>%
+  group_by(Group)%>%
+  summarize(grpsum=sum(Count))
 
 ####################################################
 # Chronic Condition Prevalence Visualization
