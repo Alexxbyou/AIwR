@@ -126,11 +126,11 @@ age.vis.comp<-function(
 ##########################
 # Gender/Race/oth. Categorical Variables Visualization
 ##########################
-cat.vis<-function(data,title){
-  if(length(unique(data$Category))>3){
-    cat.vis.bar(data,title)
+cat.vis<-function(data,Title){
+  if(length(unique(data[,1]))>3){
+    cat.vis.bar(data,Title)
   }else{
-    cat.vis.donut(data,title)
+    cat.vis.donut(data,Title)
   }
 }
 
@@ -177,6 +177,7 @@ cat.vis.bar<-function(
           axis.text.x=element_blank(),
           axis.ticks.x=element_blank(),
           axis.title = element_text(size = 12, face = "bold"),
+          #legend.text = element_text(angle=30),
           plot.title = element_text(size = 20, face = "bold",hjust = 0.5))
   return(g)
 }
