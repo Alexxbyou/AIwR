@@ -64,8 +64,21 @@ elderly.group<-function(cutoff,elderly){
 age.vis<-function(
   age,
   cutoff=c(0,15+0:7*10),
-  elderly=65,
-  Title="Age"
+  elderly=65
+){
+  if(is.vector(age)){
+    age.vis.sing(age,cutoff,elderly)
+  }else{
+    names(age)<-c("age","group")
+    age.vis.comp(age,cutoff,elderly)
+  }
+}
+
+
+age.vis.sing<-function(
+  age,
+  cutoff=c(0,15+0:7*10),
+  elderly=65
 ){
   cutoff<-c(0,cutoff,999)%>%
     unique()%>%
@@ -82,7 +95,7 @@ age.vis<-function(
   
   g<-ggplot()+
     geom_bar(data=age.group,mapping=aes(x=Age,y=Count,fill=Elderly),stat="identity")+
-    ggtitle(Title)+
+    ggtitle("Age")+
     theme(legend.position = "bottom"
           ,plot.title = element_text(size = 20, face = "bold",hjust = 0.5))
   return(g)
@@ -92,8 +105,7 @@ age.vis<-function(
 age.vis.comp<-function(
   age.n.grp,   # data.frame(age,group)
   cutoff=c(0,15+0:7*10),
-  elderly=65,
-  Title="Age"
+  elderly=65
 ){
   cutoff<-c(0,cutoff,999)%>%
     unique()%>%
@@ -116,7 +128,7 @@ age.vis.comp<-function(
   
   g<-ggplot()+
     geom_bar(data=age.group.sum,mapping=aes(x=Age,y=Count,group=Group,fill=Group,color=Elderly),stat="identity",position="dodge")+
-    ggtitle(Title)+
+    ggtitle("Age")+
     theme(legend.position = "bottom"
           ,plot.title = element_text(size = 20, face = "bold",hjust = 0.5))
   return(g)
