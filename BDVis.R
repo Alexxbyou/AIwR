@@ -57,11 +57,12 @@ age.vis<-function(
   names(age.group)<-c("Age","Count")
   age.group$Elderly<-elderly.group(cutoff,elderly)
   
-  ggplot()+
+  g<-ggplot()+
     geom_bar(data=age.group,mapping=aes(x=Age,y=Count,fill=Elderly),stat="identity")+
     ggtitle(Title)+
     theme(legend.position = "bottom"
           ,plot.title = element_text(size = 20, face = "bold",hjust = 0.5))
+  return(g)
 }
 
 
@@ -90,11 +91,12 @@ age.vis.comp<-function(
   age.group.sum<-do.call(rbind.data.frame,age.group.list)
   age.group.sum$Group<-factor(age.group.sum$Group)
   
-  ggplot()+
+  g<-ggplot()+
     geom_bar(data=age.group.sum,mapping=aes(x=Age,y=Count,group=Group,fill=Group,color=Elderly),stat="identity",position="dodge")+
     ggtitle(Title)+
     theme(legend.position = "bottom"
           ,plot.title = element_text(size = 20, face = "bold",hjust = 0.5))
+  return(g)
 }
 
 
@@ -123,7 +125,7 @@ cat.vis.donut<-function(
   }
   data$label.perc<-paste(sprintf("%.2f",data$Perc*100),"%",sep="")
   
-  ggplot() +
+  g<-ggplot() +
     geom_bar(data=data, mapping=aes(x=3.5,y=Perc,fill=Category),stat="identity",colour="grey30") +
     geom_text(data=data,mapping=aes(x=3.5,y=Perc,label=label.perc,vjust=.1))+
     coord_polar(theta="y") +
@@ -134,6 +136,7 @@ cat.vis.donut<-function(
           axis.ticks=element_blank(),
           legend.position = "bottom"
           ,plot.title = element_text(size = 20, face = "bold",hjust = 0.5))
+  return(g)
 }
 
 
@@ -165,15 +168,61 @@ Prev.vis<-function(
   prev.df$prev.min<-prev.df$Prevalence-prev.df$Std*qnorm(q.conf)
   prev.df$prev.max<-prev.df$Prevalence+prev.df$Std*qnorm(q.conf)
   
-  ggplot()+
+  g<-ggplot()+
     geom_bar(data=prev.df,mapping=aes(x=Disease,y=Prevalence),stat="identity",fill="steelblue")+
     geom_errorbar(data=prev.df,mapping=aes(x=Disease,ymin=prev.min, ymax=prev.max),color="#F08080",width=.2)+
     coord_flip()+
     ggtitle(Title)+
     theme(plot.title = element_text(size = 20, face = "bold",hjust = 0.5))
+  return(g)
 }
 
 
+
+####################################################
+# Multiple plot function
+####################################################
+grid_arrange_shared_legend <-
+  function(...,
+           ncol = length(list(...)),
+           nrow = 1,
+           position = c("bottom", "right")) {
+    
+    plots <- list(...)
+    position <- match.arg(position)
+    g <-
+      ggplotGrob(plots[[1]] + theme(legend.position = position))$grobs
+    legend <- g[[which(sapply(g, function(x)
+      x$name) == "guide-box")]]
+    lheight <- sum(legend$height)
+    lwidth <- sum(legend$width)
+    gl <- lapply(plots, function(x)
+      x + theme(legend.position = "none"))
+    gl <- c(gl, ncol = ncol, nrow = nrow)
+    
+    combined <- switch(
+      position,
+      "bottom" = arrangeGrob(
+        do.call(arrangeGrob, gl),
+        legend,
+        ncol = 1,
+        heights = unit.c(unit(1, "npc") - lheight, lheight)
+      ),
+      "right" = arrangeGrob(
+        do.call(arrangeGrob, gl),
+        legend,
+        ncol = 2,
+        widths = unit.c(unit(1, "npc") - lwidth, lwidth)
+      )
+    )
+    
+    grid.newpage()
+    grid.draw(combined)
+    
+    # return gtable invisibly
+    invisible(combined)
+    
+  }
 
 
 
