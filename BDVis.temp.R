@@ -45,7 +45,13 @@ ggplot() +
         axis.text=element_blank(),
         axis.ticks=element_blank())
 
-  
+
+CH1.demo <- readRDS("~/Documents/Projects/bdtest/newtest/content/AI/2018-02-21-ai-analytics/CH1.demo.RDS")
 cat.df.comp<-rbind(cat.df,cat.df,cat.df,cat.df)
 cat.df.comp$group<-rep(1:4,each=4)
 cat.df.comp$Freq<-abs(cat.df.comp$Freq+sample(1:5000,16)-2500)
+
+
+prev.df.comp<-rbind(prev.df,prev.df,prev.df,prev.df)
+prev.df.comp$group<-rep(1:4,each=12)
+prev.df.comp$Prevalence<-abs(prev.df.comp$Prevalence+rnorm(48,0,0.1))
