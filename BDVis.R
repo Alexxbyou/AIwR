@@ -8,15 +8,38 @@
 
 require(ggplot2)
 require(dplyr)
+require(gridExtra)
 
+##########################
+# Column functions for data preparation
+##########################
+
+# multiple columns, to solve the frequency or prevalence
+col.aggr<-function(name,df){
+  as.data.frame(table(df[,getcolumn(name,df)]),stringsAsFactors=F)
+}
+
+# retrieve the column name according to the given search
+getcolumn<-function(name,df,column.name=T){
+  grep(name,names(df),ignore.case = T,value=column.name)
+}
+
+
+# multiple columns, to solve the frequency or prevalence
+cols.aggr<-function(df,prev=T){
+  func<-ifelse(prev,"mean","sum")
+  prev.c<-apply(df,2,get(func))
+  prev.df<-data.frame(
+    Disease=names(prev.c),
+    Prevalence=prev.c,
+    stringsAsFactors = F
+  )
+  return(prev.df)
+}
 
 ##########################
 # Age Visualization
 ##########################
-
-getcolumn<-function(name,df,column.name=T){
-  grep(name,names(df),ignore.case = T,value=column.name)
-}
 
 cutoff2label<-function(cutoff){
   np<-length(cutoff)
@@ -103,39 +126,58 @@ age.vis.comp<-function(
 ##########################
 # Gender/Race/oth. Categorical Variables Visualization
 ##########################
+cat.vis<-function(data,title){
+  if(length(unique(data$Category))>3){
+    cat.vis.bar(data,title)
+  }else{
+    cat.vis.donut(data,title)
+  }
+}
+
 cat.vis.donut<-function(
   data, #data.frame(Category,Count)
-  order=c("default","alphabet","desc","asc"),
-  Title="Gender"
+  Title
 ){
   names(data)<-c("Category","Count")
   data$Perc<-data$Count/sum(data$Count)
-  order<-order[1]
-  if(order=="default")
-    data$Category<-factor(data$Category,levels=rev(data$Category))
-  if(order=="alphabet")
-    data$Category<-factor(data$Category,levels=rev(sort(as.character(data$Category))))
-  if(order=="desc"){
-    lvl<-data$Category[order(data$Count)]
-    data$Category<-factor(data$Category,levels=lvl)
-  }
-  if(order=="asc"){
-    lvl<-data$Category[order(-data$Count)]
-    data$Category<-factor(data$Category,levels=lvl)
-  }
-  data$label.perc<-paste(sprintf("%.2f",data$Perc*100),"%",sep="")
+  data$Category<-factor(data$Category,levels=data$Category)
+  data$label.perc<-paste(sprintf("%.1f",data$Perc*100),"%",sep="")
+  lgd.txt<-paste(data$Category,"(",data$label.perc,")",sep="")[order(data$Category)]
   
   g<-ggplot() +
     geom_bar(data=data, mapping=aes(x=3.5,y=Perc,fill=Category),stat="identity",colour="grey30") +
-    geom_text(data=data,mapping=aes(x=3.5,y=Perc,label=label.perc,vjust=.1))+
+    #geom_text(data=data,mapping=aes(x=3.5,y=Perc,label=label.perc,vjust=.1))+
     coord_polar(theta="y") +
     xlab("")+ylab("")+ggtitle(Title)+
   xlim(c(0, 4)) +
+    scale_fill_discrete(name="",labels=lgd.txt)+
     theme(panel.grid=element_blank(),
           axis.text=element_blank(),
           axis.ticks=element_blank(),
-          legend.position = "bottom"
-          ,plot.title = element_text(size = 20, face = "bold",hjust = 0.5))
+          legend.position = "bottom",
+          #legend.text = element_text(lgd.txt),
+          plot.title = element_text(size = 20, face = "bold",hjust = 0.5))
+  return(g)
+}
+
+cat.vis.bar<-function(
+  data, #data.frame(Category,Count)
+  Title
+){
+  names(data)<-c("Category","Count")
+  data$Perc<-data$Count/sum(data$Count)*100
+  data$Category<-factor(data$Category,levels=data$Category)
+  data$label.cnt<-formatC(data$Count,big.mark=",")
+  
+  g<-ggplot() +
+    geom_bar(data=data, mapping=aes(x=Category,y=Perc,fill=Category),width=.5,stat="identity") +
+    xlab("")+ylab("Proportion(%)")+ggtitle(Title)+
+    scale_fill_discrete(name="")+
+    theme(legend.position = "bottom",
+          axis.text.x=element_blank(),
+          axis.ticks.x=element_blank(),
+          axis.title = element_text(size = 12, face = "bold"),
+          plot.title = element_text(size = 20, face = "bold",hjust = 0.5))
   return(g)
 }
 
@@ -164,6 +206,7 @@ Prev.vis<-function(
     lvl<-prev.df$Disease[order(-prev.df$Prevalence)]
     prev.df$Disease<-factor(prev.df$Disease,levels=lvl)
   }
+  if(ncol(prev.df)<=2)prev.df$Std<-0
   q.conf<-1-(1-confidence)/2
   prev.df$prev.min<-prev.df$Prevalence-prev.df$Std*qnorm(q.conf)
   prev.df$prev.max<-prev.df$Prevalence+prev.df$Std*qnorm(q.conf)
@@ -182,6 +225,8 @@ Prev.vis<-function(
 ####################################################
 # Multiple plot function
 ####################################################
+# if no share legend, use grid.arrange()
+
 grid_arrange_shared_legend <-
   function(...,
            ncol = length(list(...)),
