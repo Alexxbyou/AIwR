@@ -9,4 +9,4 @@ CH1.demo<-left_join(CH1.demo,pat.grp)
 
 data<-CH1.demo[,c("AGE","group")]
 
-
+data$AGE<-age.cut(data$AGE)
