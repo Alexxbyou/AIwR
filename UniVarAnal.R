@@ -7,6 +7,9 @@
 
 ##########################################################################
 ##########################################################################
+library(knitr)
+library(kableExtra)
+
 
 ##########################
 # Age processing
@@ -79,11 +82,21 @@ reg.anl<-function(
   fml<-as.formula(paste(names(data)[2:1],collapse="~"))
   mdl<-glm(formula=fml,data=data,family="binomial")
   result<-coef.proc(summary(mdl)$coef)
+  row.names(result)<-NULL
   if(beautify)result<-coef.beaut(result)
   return(result)
 }
 
 
 ##########################
-# Visualization
+# Table formating
 ##########################
+
+coef.temp.func<-function(data,colpattern){
+  reg.anl(data[,getcolumn(colpattern,data)])%>%
+    kable("html")%>%
+    kable_styling("striped", full_width = F)
+}
+
+
+
