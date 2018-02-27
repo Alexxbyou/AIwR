@@ -1,3 +1,18 @@
+##########################################################################
+##########################################################################
+
+# Title: AI Analysis - RiskPrediction
+# Description: fitting regression and generate summary reports
+
+##########################################################################
+##########################################################################
+
+
+library(ggplot2)
+library(ROCR)
+library(dplyr)
+library(gridExtra)
+
 
 ##########################
 # Get model structure
@@ -165,4 +180,109 @@ reg.para.var.vis<-function(coef.df,title){
   return(gg)
 }
 
+
+pred.score.fun<-function(mdl.glm,mdl.data){
+  pred<-predict(mdl.glm,newdata = mdl.data,allow.new.levels=T,type = "response")
+  pwr<-find.power(pred,T)
+  mdl.pred<-data.frame(
+    prediction=pred,
+    pred.scale=pred^pwr,
+    outcome=sapply(mdl.data[,1],function(x)ifelse(x,"Dead","Alive"))
+  )
+  return(mdl.pred)
+}
+
+roc.vis<-function(mdl.pred){
+  pred<-ROCR::prediction(mdl.pred$prediction,mdl.pred$outcome)
+  roc.df<-unique(data.frame(
+    fpr=round(pred@fp[[1]]/max(pred@fp[[1]])/2,3)*2,
+    tpr=round(pred@tp[[1]]/max(pred@tp[[1]])/2,3)*2
+  ))
+  auc<-ROCR::performance(pred, measure = "auc")@y.values[[1]]
+  auc.text<-paste("Area Under Curve (AUC) = ",sprintf("%.02f",auc*100),"%",sep="")
+  gg<-ggplot(roc.df,aes(fpr,tpr))+geom_step(size = 1,colour="steelblue", alpha = 0.7)+
+    geom_abline(slope = 1,intercept = 0,size = 1,colour="steelblue", alpha = 0.7)+
+    geom_text(aes(x=.5,y=.5,label=auc.text),colour="#EE3A8C",angle=45,vjust=-.5,hjust=.5)+
+    labs(title= "ROC curve", 
+         x = "False Positive Rate (1-Specificity)", 
+         y = "True Positive Rate (Sensitivity)")+coord_equal()+
+    theme(legend.position = "bottom",
+          axis.ticks=element_blank(),
+          axis.title = element_text(size = 12, face = "bold"),
+          plot.title = element_text(size = 20, face = "bold",hjust = 0.5),
+          panel.border = element_rect(colour = "steelblue", fill=NA))
+  return(gg)
+}
+
+perf.vis<-function(mdl.pred,measure){
+  ind<-which(measure.lkup$code==measure)
+  title<-measure.lkup$measure[ind]
+  pred<-ROCR::prediction(mdl.pred$prediction,mdl.pred$outcome)
+  msr.result<-ROCR::performance(pred, measure)
+  msr.df<-unique(data.frame(
+    x=round(msr.result@x.values[[1]],3),
+    y=round(msr.result@y.values[[1]],3)
+  ))
+  ypos<-range(msr.df$y,na.rm=T)%*%c(.7,.3)
+  xsel<-mean(msr.df$x[which.max(msr.df$y)])
+  ggplot(data=msr.df,aes(x=x,y=y))+
+    geom_step(size=1,colour="steelblue")+
+    geom_text(aes(x=xsel,y=ypos,label=xsel),color="#EE3A8C",angle=90,vjust=1)+
+    geom_vline(xintercept = xsel,colour="#EE3A8C",size=1)+
+    labs(title=title,x="",y="")+
+    theme(legend.position = "bottom",
+          axis.ticks=element_blank(),
+          axis.title = element_text(size = 8, face = "bold"),
+          plot.title = element_text(size = 12, face = "bold",hjust = 0.5),
+          panel.border = element_rect(colour = "steelblue", fill=NA),
+          aspect.ratio = 1)
+}
+
+perf.sum.vis<-function(mdl.pred){
+  cd<-measure.lkup$code[1:8]
+  for(i in 1:8){
+    assign(cd[i],perf.vis(mdl.pred,cd[i]))
+  }
+  grid.arrange(arrangeGrob(grobs=lapply(cd,get),nrow=2,ncol=4))
+}
+
+threshold.sel.vis<-function(mdl.pred){
+  cd<-measure.lkup$code[9:11]
+  for(i in 1:3){
+    assign(cd[i],perf.vis(mdl.pred,cd[i]))
+  }
+  grid.arrange(arrangeGrob(grobs=lapply(cd,get),nrow=1,ncol=3))
+}
+
+
+
+
+
+
+pred.score.dist.vis<-function(mdl.pred){
+  gg<-ggplot(mdl.pred, aes(x=pred.scale, color=outcome, fill=outcome)) + 
+    geom_histogram(aes(y=..density..), alpha=0.5,position="identity")+
+    geom_density(alpha=.2)+xlim(0,1)+
+    labs(title="Predition score by outcome",x="Scaled prediction",y="Density",
+         caption = "*The higher segregated the distributions, the better the predictability")+
+    theme(legend.position = "bottom",
+          axis.ticks=element_blank(),
+          legend.title = element_blank(),
+          axis.title = element_text(size = 12, face = "bold"),
+          plot.title = element_text(size = 20, face = "bold",hjust = 0.5)) 
+  return(gg)
+}
+
+
+find.power<-function(x,plot=F){
+  var.seq<-sapply(1:99,function(a)sd(x^(a/100),na.rm = T))
+  pwr<-which.max(var.seq)/100
+  if(plot){
+    print(ggplot()+geom_line(aes(x=seq(.01,.99,.01),y=var.seq),color="steelblue",size=.8)+
+            geom_text(aes(x=pwr,y=quantile(var.seq,.05),label=paste("Power at max variance:",pwr)),color="#EE3A8C",angle=90,vjust=1)+
+      geom_vline(xintercept = pwr,colour="#EE3A8C")+
+      xlab("Power")+ylab("Standard Deviation"))
+  }
+  return(pwr)
+}
 
