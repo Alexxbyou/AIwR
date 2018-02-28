@@ -3,11 +3,36 @@
 
 # Title: AI Analysis - RiskPrediction
 # Description: fitting regression and generate summary reports
+## Functions ===
+##	getRefList	67
+##	get.mdl.strct	76
+##	ClassRef	92
+##	getClassRef	98
+##	log.reg	110
+##	coef.proc	132
+##	coef.intpt	150
+##	coef.df.to.kable	173
+##	reg.cat.vis	202
+##	reg.age.vis	219
+##	reg.para.var.vis	230
+##	find.power	258
+##	pred.score.fun	271
+##	pred.score.dist.vis	283
+##	roc.vis	299
+##	perf.vis	322
+##	perf.sum.vis	347
+##	threshold.sel.vis	356
+## ===
 
 ##########################################################################
 ##########################################################################
 
+##########################
+# Libraries
+##########################
 
+library(knitr)
+library(kableExtra)
 library(ggplot2)
 library(ROCR)
 library(dplyr)
@@ -15,10 +40,55 @@ library(gridExtra)
 
 
 ##########################
+# Lookup table
+##########################
+# measure.lkup<-readRDS("D:/bdtest/AIwR/Data/measure.lkup.RDS")
+measure.lkup<-data.frame(
+  measure=c("Accuracy","Error Rate","False Positive Rate (Fallout)","True Positive Rate (Recall/Sensitivity)","False Negative Rate (Miss)","True Negative Rate (Specificity)","Positive Predictive Value (Precision)","Negative Predictive Value","Phi/Matthews Correlation Coefficient","Mutual Information","Precision-Recall F Measure","Lift"),
+  code=c("acc","err","fpr","tpr","fnr","tnr","ppv","npv","phi","mi","f","lift"),
+  stringsAsFactors = F
+)
+
+
+
+####################################################
+####################################################
+# Modeling
+####################################################
+####################################################
+
+
+##########################
 # Get model structure
 ##########################
 # input data should only have integer/numeric or factor as variable type
 # input data should only have outcome and rest as predictors
+
+# get all levels for factors
+getRefList<-function(x){
+  if(class(x)%in%c("factor","character")){
+    unique(as.character(x))%>%paste(collapse=", ")%>%return
+  }else{
+    return("")
+  }
+}
+
+# get model structure by summarizing mdl.data and hands-on editing
+get.mdl.strct<-function(mdl.data){
+  mdl.strct<-data.frame(
+    Variable=names(mdl.data),
+    rename=names(mdl.data),
+    VarGrp="",
+    VarClass=sapply(mdl.data,class),
+    Reference="",
+    Ref.list=sapply(mdl.data,getRefList),
+    stringsAsFactors = F
+  )%>%edit
+  mdl.strct<-mdl.strct[,c("Variable","rename","VarGrp","VarClass","Reference")]
+  row.names(mdl.strct)<-NULL
+  return(mdl.strct)
+}
+
 
 ClassRef<-function(column){
   colclass<-class(column)
@@ -36,28 +106,8 @@ getClassRef<-function(data){
 
 
 ##########################
-# Coefficient process function
+# Regression
 ##########################
-
-
-
-
-##########################
-# Knitr function
-##########################
-
-# model structure: 1.variable rename, 2. variable grouping
-#mdl.strct<-data.frame(
-#  Variable=names(mdl.data),
-#  rename=c("Death","Age","Gender","Race","Marital","MediFund","DiabetesYear","PatType",names(mdl.data)[9:18],"MajorAmputation","MinorAmputation","BMI",names(mdl.data)[22:27]),
-#  VarGrp=c("Outcome",rep("Demographics",4),rep("Medical History",3),rep("Comorbidity & Complication",12),rep("Physiological Measure",4),rep("Score",3)),
-#  stringsAsFactors=F
-#)
-
-#mdl.strct<-cbind(mdl.strct,getClassRef(mdl.data))
-
-#names(mdl.data)<-mdl.strct$rename
-
 log.reg<-function(mdl.data){
   fml<-as.formula(paste(names(mdl.data)[1],"~."))
   mdl.glm<-glm(fml,family="binomial",data=mdl.data)
@@ -65,6 +115,21 @@ log.reg<-function(mdl.data){
   return(mdl.glm)
 }
 
+
+
+
+
+####################################################
+####################################################
+# Coefficient summarization
+####################################################
+####################################################
+
+##########################
+# Coefficient table using knitr
+##########################
+
+# from Rcoef table (Estimates, Std, etc...) to (OddsRatio, Upper95, Lower95, Pvalue)
 coef.proc<-function(coef.df,conf=.95){
   normqtl<-qnorm(conf+(1-conf)/2)
   coef.df<-data.frame(
@@ -82,8 +147,7 @@ coef.proc<-function(coef.df,conf=.95){
   return(coef.df)
 }
 
-
-
+# adding additional columns according to model structure
 coef.intpt<-function(coef.df,mdl.data,mdl.strct){
   fct.row<-which(mdl.strct$VarClass=="factor")
   fct.list<-lapply(fct.row,function(r){
@@ -105,6 +169,8 @@ coef.intpt<-function(coef.df,mdl.data,mdl.strct){
   coef.df$color.cd<-as.numeric(as.factor(coef.df$VarGrp))
   return(coef.df)
 }
+
+# presenting coefficient table using knitr. Modifications include: header, grouping categorical variables, highlighting significant variables
 coef.df.to.kable<-function(coef.df){
   coef.kable<-coef.df%>%
     mutate(
@@ -130,23 +196,23 @@ coef.df.to.kable<-function(coef.df){
 
 
 ##########################
-# Visualization
+# Coefficient visualization
 ##########################
 
 # Categorical variable visualization
-reg.cat.vis<-function(var,coef.proc.df){
+reg.cat.vis<-function(var,coef.proc.df,trend=T){
   coef.df<-coef.proc.df[coef.proc.df$Var.org==var,]
   coef.df$Variable<-factor(coef.df$Variable,levels=coef.df$Variable)
   gg<-ggplot(data=coef.df,aes(x=Variable,y=OddsRatio))+
     geom_bar(stat="identity",color="gray",width =.4,alpha=.8,fill="dodgerblue4")+
     geom_errorbar(aes(ymin=Low95, ymax=Up95),size=.5,colour="deeppink",width=.2)+
     geom_line(aes(x=1:nrow(coef.df),y=OddsRatio),colour="deeppink")+
-    stat_smooth(aes(x = as.numeric(Variable), y = OddsRatio), method = "lm", se = FALSE,colour="#838B8B") +
     xlab(var)+ylab("Odds Ratio")+ggtitle(var)+
     theme(legend.position = "bottom",
           axis.ticks.x=element_blank(),
           axis.title = element_text(size = 12, face = "bold"),
           plot.title = element_text(size = 20, face = "bold",hjust = 0.5))
+  if(trend)gg<-gg+stat_smooth(aes(x = as.numeric(Variable), y = OddsRatio), method = "lm", se = FALSE,colour="#838B8B")
   return(gg)
 }
 
@@ -159,9 +225,9 @@ reg.age.vis<-function(age.effect){
   return(gg)
 }
 
-# 
-coef.df<-coef.proc.df[coef.proc.df$VarGrp=="Comorbidity & Complication",]
-coef.df<-coef.df[rev(order(coef.df$Variable)),]
+# Parallel binary variable effect visualization
+#coef.df<-coef.proc.df[coef.proc.df$VarGrp=="Comorbidity & Complication",]
+#coef.df<-coef.df[rev(order(coef.df$Variable)),]
 reg.para.var.vis<-function(coef.df,title){
   coef.df$Variable<-factor(coef.df$Variable,levels=coef.df$Variable)
   coef.df$Effect<-"Negative"
@@ -181,9 +247,31 @@ reg.para.var.vis<-function(coef.df,title){
 }
 
 
+
+
+####################################################
+####################################################
+# Model Validation
+####################################################
+####################################################
+
+# find power to most segregate [0,1] variables
+find.power<-function(x,plot=F){
+  var.seq<-sapply(1:99,function(a)sd(x^(a/100),na.rm = T))
+  pwr<-which.max(var.seq)/100
+  if(plot){
+    print(ggplot()+geom_line(aes(x=seq(.01,.99,.01),y=var.seq),color="steelblue",size=.8)+
+            geom_text(aes(x=pwr,y=quantile(var.seq,.05),label=paste("Power at max variance:",pwr)),color="#EE3A8C",angle=90,vjust=1)+
+            geom_vline(xintercept = pwr,colour="#EE3A8C")+
+            xlab("Power")+ylab("Standard Deviation"))
+  }
+  return(pwr)
+}
+
+# prediction score functions
 pred.score.fun<-function(mdl.glm,mdl.data){
   pred<-predict(mdl.glm,newdata = mdl.data,allow.new.levels=T,type = "response")
-  pwr<-find.power(pred,T)
+  pwr<-find.power(pred)
   mdl.pred<-data.frame(
     prediction=pred,
     pred.scale=pred^pwr,
@@ -192,6 +280,23 @@ pred.score.fun<-function(mdl.glm,mdl.data){
   return(mdl.pred)
 }
 
+# visualizing prediction score segregation
+pred.score.dist.vis<-function(mdl.pred){
+  gg<-ggplot(mdl.pred, aes(x=pred.scale, color=outcome, fill=outcome)) + 
+    geom_histogram(aes(y=..density..), alpha=0.5,position="identity")+
+    geom_density(alpha=.2)+xlim(0,1)+
+    labs(title="Predition score by outcome",x="Scaled prediction",y="Density",
+         caption = "*The higher segregated the distributions, the better the predictability")+
+    theme(legend.position = "bottom",
+          axis.ticks=element_blank(),
+          legend.title = element_blank(),
+          axis.title = element_text(size = 12, face = "bold"),
+          plot.title = element_text(size = 20, face = "bold",hjust = 0.5)) 
+  return(gg)
+}
+
+
+# Calculating and visualizing RoC
 roc.vis<-function(mdl.pred){
   pred<-ROCR::prediction(mdl.pred$prediction,mdl.pred$outcome)
   roc.df<-unique(data.frame(
@@ -214,10 +319,11 @@ roc.vis<-function(mdl.pred){
   return(gg)
 }
 
+# Performance visualization, measure see measure.lkup
 perf.vis<-function(mdl.pred,measure){
   ind<-which(measure.lkup$code==measure)
   title<-measure.lkup$measure[ind]
-  pred<-ROCR::prediction(mdl.pred$prediction,mdl.pred$outcome)
+  pred<-ROCR::prediction(predictions=mdl.pred$prediction,labels=mdl.pred$outcome)
   msr.result<-ROCR::performance(pred, measure)
   msr.df<-unique(data.frame(
     x=round(msr.result@x.values[[1]],3),
@@ -238,20 +344,21 @@ perf.vis<-function(mdl.pred,measure){
           aspect.ratio = 1)
 }
 
+# Performance summary on Accuracy, Error, FPR, TPR, FNR, TNR, PPV, NPV
 perf.sum.vis<-function(mdl.pred){
   cd<-measure.lkup$code[1:8]
-  for(i in 1:8){
-    assign(cd[i],perf.vis(mdl.pred,cd[i]))
-  }
-  grid.arrange(arrangeGrob(grobs=lapply(cd,get),nrow=2,ncol=4))
+  glist<-lapply(cd,function(x)perf.vis(mdl.pred,x))
+  names(glist)<-cd
+  grid.arrange(arrangeGrob(grobs=glist,nrow=2,ncol=4,width=1300))
 }
 
+
+# Threshold selection
 threshold.sel.vis<-function(mdl.pred){
   cd<-measure.lkup$code[9:11]
-  for(i in 1:3){
-    assign(cd[i],perf.vis(mdl.pred,cd[i]))
-  }
-  grid.arrange(arrangeGrob(grobs=lapply(cd,get),nrow=1,ncol=3))
+  glist<-lapply(cd,function(x)perf.vis(mdl.pred,x))
+  names(glist)<-cd
+  grid.arrange(arrangeGrob(grobs=glist,nrow=1,ncol=3))
 }
 
 
@@ -259,30 +366,4 @@ threshold.sel.vis<-function(mdl.pred){
 
 
 
-pred.score.dist.vis<-function(mdl.pred){
-  gg<-ggplot(mdl.pred, aes(x=pred.scale, color=outcome, fill=outcome)) + 
-    geom_histogram(aes(y=..density..), alpha=0.5,position="identity")+
-    geom_density(alpha=.2)+xlim(0,1)+
-    labs(title="Predition score by outcome",x="Scaled prediction",y="Density",
-         caption = "*The higher segregated the distributions, the better the predictability")+
-    theme(legend.position = "bottom",
-          axis.ticks=element_blank(),
-          legend.title = element_blank(),
-          axis.title = element_text(size = 12, face = "bold"),
-          plot.title = element_text(size = 20, face = "bold",hjust = 0.5)) 
-  return(gg)
-}
-
-
-find.power<-function(x,plot=F){
-  var.seq<-sapply(1:99,function(a)sd(x^(a/100),na.rm = T))
-  pwr<-which.max(var.seq)/100
-  if(plot){
-    print(ggplot()+geom_line(aes(x=seq(.01,.99,.01),y=var.seq),color="steelblue",size=.8)+
-            geom_text(aes(x=pwr,y=quantile(var.seq,.05),label=paste("Power at max variance:",pwr)),color="#EE3A8C",angle=90,vjust=1)+
-      geom_vline(xintercept = pwr,colour="#EE3A8C")+
-      xlab("Power")+ylab("Standard Deviation"))
-  }
-  return(pwr)
-}
 

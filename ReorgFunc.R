@@ -59,7 +59,10 @@ write.code<-function(code,path){
   write.table(code,path,row.names=F,col.names = F,quote=F)
 }
 
-
+CodeReorg<-function(path){
+  code<-scan(path,what = "character",sep="\n",blank.lines.skip=F)
+  write.code(add.fn.content(code),path)
+}
 
 
 
