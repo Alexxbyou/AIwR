@@ -33,9 +33,8 @@
 
 library(knitr)
 library(kableExtra)
-library(ggplot2)
+library(tidyverse)
 library(ROCR)
-library(dplyr)
 library(gridExtra)
 
 

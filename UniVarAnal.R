@@ -59,13 +59,18 @@ coef.proc<-function(coef.df,conf=.95){
 }
 
 
+print.c<-function(x,digit=2){
+  prt<-sprintf(str_c("%.",digit,"f"),x)
+  if(any(x>999))prt[x>999]<-">10e4"
+  return(prt)
+}
 
 
 coef.beaut<-function(coef.df){
   for(c in 2:4){
-    coef.df[,c]<-sprintf("%.2f",coef.df[,c])
+    coef.df[,c]<-coef.df[,c]%>%print.c(2)
   }
-  coef.df[,5]<-sprintf("%.4f",coef.df[,5])
+  coef.df[,5]<-coef.df[,5]%>%print.c(4)
   return(coef.df)
 }
 
