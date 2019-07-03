@@ -1,0 +1,127 @@
+---
+title: "Cargill Test"
+author: "Alex"
+date: "7/3/2019"
+output: 
+  html_document:
+    toc: true
+---
+
+### Setting up the Analytic Environment
+```{r setup, include=FALSE}
+# Loading predefined function: QuickVis.R
+source("Functions/QuickVis.R")
+```
+
+### Histogram Customized
+```{r}
+## Histogram customized
+cont0_100<-runif(1000,1,100)
+cont2grp<-tibble(
+  age=c(runif(1000,1,70),runif(1000,30,100)),
+  group=rep(1:4,each=500)
+)
+cont0_10000<-runif(10000,1,10000)
+cutoff<-c(0,1000,3000,5000,7000,9000)
+
+
+hist.vis(cont0_100)
+hist.vis(cont2grp)
+hist.vis(cont0_10000,cutoff)
+```
+
+## Histogram customized
+```{r}
+hist.data<-tibble(x=rnorm(5000),group=as.character(rep(1:2,each=2500)))
+
+# univariate, histogram
+ggplot(hist.data,aes(x=x))+
+  geom_histogram(bins=50,fill="steelblue",color="gray")+wm
+
+# univariate, density
+ggplot(hist.data,aes(x=x))+
+  geom_histogram(aes(y=..density..),bins=50,fill="steelblue",color="gray")+
+  geom_density(alpha=.2, fill="#FF6666")
+
+# multivariate, histogram
+ggplot(hist.data,aes(x=x,fill=group))+
+  geom_histogram(bins=50,color="gray",position="dodge")
+
+# multivariate, density
+ggplot(hist.data,aes(x=x,fill=group))+
+  geom_histogram(aes(y=..density..),bins=50,color="gray",position="dodge")+
+  geom_density(aes(col=group),alpha=.2, fill="#FF6666")
+```
+
+## Categorical Variable Visualization
+```{r}
+cat.data1<-data.frame(Letter=LETTERS[1:7],Freq=c(100,300,500,400,600,700,750))
+cat.data2<-data.frame(Letter=LETTERS[1:3],Freq=c(100,300,500))
+cat.data3<-data.frame(Letter=LETTERS[1:7],Freq=c(100,300,500,400,600,700,750),group=c(1,1,2,2,3,3,3))
+cat.data4<-data.frame(Letter=c("A","B","A","B"),Freq=c(100,300,500,400),group=c(1,1,2,2))
+cat.vis(cat.data1,"Distribution")
+cat.vis(cat.data2,"Distribution")
+cat.vis(cat.data3,"Distribution")
+cat.vis(cat.data4,"Distribution")
+```
+
+## Prevalence Visualization
+```{r}
+Prev.data1<-data.frame(Variable=LETTERS[1:7],Prevalence=runif(7,0,1))
+Prev.data2<-data.frame(Variable=c(LETTERS[1:7],LETTERS[1:7]),Prevalence=runif(14,0,1),Group=rep(1:2,each=7))
+
+Prev.vis(Prev.data1)
+Prev.vis(Prev.data2)
+
+```
+
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+### Predefine Visualization Functions
+
+In this analysis, I used some predefine functions for Visualization. The functions are listed below are the list of functions used, for detail please visit https://github.com/Alexxbyou
+
+```
+##	col.aggr	45
+##	getcolumn	50
+##	cols.aggr	56
+##	cols.aggr.sing	74
+##	df.sort	88
+##	lvl.sort	93
+##	vec.cumu	108
+##	find.cumu.mid	112
+##	cutoff2label	120
+##	elderly.group	129
+##	hist.vis	140
+##	age.vis.sing	154
+##	age.vis.comp	184
+##	cat.vis	226
+##	cat.vis.sing	237
+##	cat.vis.comp	245
+##	cat.vis.donut.sing	253
+##	cat.vis.donut.comp	282
+##	cat.vis.bar.sing	320
+##	cat.vis.bar.comp	342
+##	Prev.vis	374
+##	Prev.vis.sing	386
+##	Prev.vis.comp	404
+```
